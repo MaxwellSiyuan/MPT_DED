@@ -19,6 +19,10 @@ syms x1 x2 x3
 brloss = @(bri,i,j,t) (P0(i,t)^2+2*P0(i,t)*(bri-...
 P0(i,t))+Q0(i,t)^2)/V0(j,t)^2 * results.branch(i,BR_R) / 1e3;
 
+MPT_time = zeros(96);
+Decision_time = zeros(96);
+Option_time = zeros(96);
+
 t = 50;
 
 % for t=1:96
@@ -56,6 +60,8 @@ balance = x1 + x2 + x3 + SolarPower(t)*(1+th1)+WindPower(t)*(1+th2)+...
 			-LoadPower(12,t)*(1+th5)-LoadPower(11,t)*(1+th5)...
 			-LoadPower(10,t)*(1+th4);
 balance = -balance;
+
+% Î´¿¼ÂÇÍøËðµÄÇé¿ö
 % balance0 = x1 + x2 + x3 + SolarPower(t)*(1+th1)+WindPower(t)*(1+th2)...
 %             -LoadPower(4,t)*(1+th3)-LoadPower(5,t)*...
 % 			(1+th3)-LoadPower(6,t)*(1+th3)-LoadPower(3,t)*(1+th3)...
@@ -147,7 +153,7 @@ pB =[BLineCons;BOutputCons;B_balance];%-B_balance];
 
 % forecast error
 % solar wind load1 load2 load3 
-err = 1;
+err = 0.1;
 err = [err; err;err; err; err;];
 Ath = [eye(5);-eye(5)];
 bth = [err;err];
@@ -157,17 +163,71 @@ f = K(:,2);
 c = sum(K(:,3));
 
 problem = Opt('A',A,'pB',pB,'b',b,'H',H,'f',f,'c',c,'Ath',Ath,'bth',bth);
+R = mpt_call_mpqp(problem);
 
-tic
-R = mpt_call_mpqp(problem)
-toc
+MPT_time(t) = R.stats.solveTime;
+
+Num_regions = R.xopt.Num;
+
+% Conventional one-by-one judgment
+
+for i=1:Num_regions
+	if sum(R.xopt.Set(i,1).A*err <= R.xopt.Set(i,1).b) == size(err,1)
+		break
+	end
+end
+x = R.mpqpsol.Fi{1,i}*err+R.mpqpsol.Gi{1,i};
+
+% Generate the Region Table
+
+MaxTable = zeros(Num_regions,5);
+MinTable = zeros(Num_regions,5);
+
+P = sdpvar(5,1);
+% Optimaize in every dimision
+for j=1:5
+	Obj = P(j);
+	for k=1:Num_regions
+		Cons = [R.xopt.Set(k,1).A*P <= R.xopt.Set(k,1).b];
+		optimize(Cons,Obj);
+		MinTable(k,j)=double(Obj);
+		optimize(Cons,-Obj);
+		MaxTable(k,j)=double(Obj);
+	end
+end
+
+%%
+
+% generate the real values of power
+
+th1_ = unifrnd(-err(1),err(1));
+th2_ = unifrnd(-err(2),err(2));
+th3_ = unifrnd(-err(3),err(3));
+th4_ = unifrnd(-err(4),err(4));
+th5_ = unifrnd(-err(5),err(5));
+
+RealSolarPower = SolarPower*(1+th1_);
+RealWindPower = WindPower*(1+th2_);
+
+RealLoadPower=[LoadPower(1,t)*(1+th5_);
+			   LoadPower(2,t)*(1+th3_);
+			   LoadPower(3,t)*(1+th3_);
+			   LoadPower(4,t)*(1+th3_);
+			   LoadPower(5,t)*(1+th3_);
+			   LoadPower(6,t)*(1+th3_);
+			   LoadPower(7,t)*(1+th4_);
+			   LoadPower(8,t)*(1+th4_);
+			   LoadPower(9,t)*(1+th4_);
+			   LoadPower(10,t)*(1+th4_);
+			   LoadPower(11,t)*(1+th5_);
+			   LoadPower(12,t)*(1+th5_);
+			   LoadPower(13,t)*(1+th5_);
+			   LoadPower(14,t)*(1+th5_);];
 
 
-% end
-% x = [GenSave(1);GenSave(3);GenSave(4);];
-% A*x
-% b
-% A*x<=b
+
+
+
 
 
 
