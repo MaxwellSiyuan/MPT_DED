@@ -153,8 +153,9 @@ pB =[BLineCons;BOutputCons;B_balance];%-B_balance];
 
 % forecast error
 % solar wind load1 load2 load3 
-err = 0.1;
-err = [err; err;err; err; err;];
+err = 0.8;
+% err = [err; err;err; err; err;];
+err = unifrnd(0,0.6,5,1);
 Ath = [eye(5);-eye(5)];
 bth = [err;err];
 % parameters of the objective function
@@ -187,7 +188,6 @@ for j=1:5
 	end
 end
 
-
 % generate the real values of power
 
 th1_ = unifrnd(-err(1),err(1));
@@ -216,18 +216,18 @@ RealLoadPower=[LoadPower(1,t)*(1+th5_);
 			   LoadPower(14,t)*(1+th5_);];
 
 clc
-tic          
-          
+R.xopt.Num
+tic                  
 Realth = ones(Num_regions,1) * th_';
-Credit = ((Realth <= MaxTable)&(Realth >= MinTable))';
-Credit = sum(Credit);
+Credit = (Realth <= MaxTable)&(Realth >= MinTable);
+Credit = sum(Credit,2);
 Credit = find(Credit==5);
 
-if size(Credit,2)==1
+if size(Credit,1)==1
 	j = Credit
 else
-	for j = Credit
-		if sum(R.xopt.Set(j,1).A*th_ <= R.xopt.Set(j,1).b) == size(th_,1)
+	for j = Credit'
+		if sum(R.xopt.Set(j,1).A*th_ <= R.xopt.Set(j,1).b) == size(R.xopt.Set(j,1).A,1)
 			j
 			break
 		end
@@ -239,10 +239,11 @@ toc
 % Conventional one-by-one judgment
 tic
 for j=1:Num_regions
-	if sum(R.xopt.Set(j,1).A*th_ <= R.xopt.Set(j,1).b) == size(th_,1)
+	if sum(R.xopt.Set(j,1).A*th_ <= R.xopt.Set(j,1).b) == size(R.xopt.Set(j,1).A,1)
 		j
 		break
 	end
 end
 x = R.mpqpsol.Fi{1,j}*th_+R.mpqpsol.Gi{1,j}
 toc
+Credit
