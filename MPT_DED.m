@@ -5,6 +5,10 @@ load('GridData.mat');
 mpc = loadcase('node14case');
 define_constants;
 
+% forecast error
+err = 0.4;
+err = [err; err;err; err; err;];
+
 % output 
 lb = [mpc.gen(1,PMIN);mpc.gen(3,PMIN);mpc.gen(4,PMIN);]*1e3;
 ub = [mpc.gen(1,PMAX);mpc.gen(3,PMAX);mpc.gen(4,PMAX);]*1e3;
@@ -23,9 +27,24 @@ MPT_time = zeros(96);
 Decision_time = zeros(96);
 Option_time = zeros(96);
 
-t = 50;
+RealSolarPower = zeros(1,96);
+RealWindPower =  zeros(1,96);
+RealLoadPower = zeros(14,96);
 
-% for t=1:96
+% t = 50;
+X_mpt_con_array = zeros(3,96);
+X_mpt_new_array = zeros(3,96);
+X_yalmip_array = zeros(3,96);
+time_mpt_con_array = zeros(1,96);
+time_mpt_new_array = zeros(1,96);
+time_yalmip_array = zeros(1,96);
+
+% t=1;
+for t=1:96
+    t
+    
+    syms br1 br2 br3 br4 br5 br6 br7 br8 br9 br10 br11 br12 br13
+    
 	nd4=br3-brloss(br3,3,3,t)-LoadPower(4,t)*(1+th3)+x1;
 	nd5=br4-brloss(br4,4,3,t)-LoadPower(5,t)*(1+th3)+SolarPower(t)*(1+th1);
 	nd6=br5-brloss(br5,5,3,t)-LoadPower(6,t)*(1+th3);
@@ -47,216 +66,245 @@ t = 50;
 		solve(nd1,nd2,nd3,nd4,nd5,nd6,nd7,nd9,nd10,nd11,nd12,nd13,nd14,...
 		br1,br2,br3,br4,br5,br6,br7,br8,br9,br10,br11,br12,br13); 
 
-balance = x1 + x2 + x3 + SolarPower(t)*(1+th1)+WindPower(t)*(1+th2)+...
-			-brloss(br3,3,3,t)-brloss(br4,4,3,t)-brloss(br5,5,3,t)...
-			-brloss(br2,2,2,t)-brloss(br1,1,1,t)-brloss(br9,9,9,t)...
-			-brloss(br8,8,7,t)-brloss(br7,7,7,t)-brloss(br6,6,1,t)...
-			-brloss(br13,13,12,t)-brloss(br12,12,12,t)-brloss(br11,11,11,t)...
-			-brloss(br10,10,1,t)-LoadPower(4,t)*(1+th3)-LoadPower(5,t)*...
-			(1+th3)-LoadPower(6,t)*(1+th3)-LoadPower(3,t)*(1+th3)...
-			-LoadPower(2,t)*(1+th3)-LoadPower(1,t)*(1+th5)-LoadPower(9,t)...
-			*(1+th4)-LoadPower(8,t)*(1+th4)-LoadPower(7,t)*(1+th4)...
-			-LoadPower(14,t)*(1+th5)-LoadPower(13,t)*(1+th5)...
-			-LoadPower(12,t)*(1+th5)-LoadPower(11,t)*(1+th5)...
-			-LoadPower(10,t)*(1+th4);
-balance = -balance;
+    balance = x1 + x2 + x3 + SolarPower(t)*(1+th1)+WindPower(t)*(1+th2)+...
+                -brloss(br3,3,3,t)-brloss(br4,4,3,t)-brloss(br5,5,3,t)...
+                -brloss(br2,2,2,t)-brloss(br1,1,1,t)-brloss(br9,9,9,t)...
+                -brloss(br8,8,7,t)-brloss(br7,7,7,t)-brloss(br6,6,1,t)...
+                -brloss(br13,13,12,t)-brloss(br12,12,12,t)-brloss(br11,11,11,t)...
+                -brloss(br10,10,1,t)-LoadPower(4,t)*(1+th3)-LoadPower(5,t)*...
+                (1+th3)-LoadPower(6,t)*(1+th3)-LoadPower(3,t)*(1+th3)...
+                -LoadPower(2,t)*(1+th3)-LoadPower(1,t)*(1+th5)-LoadPower(9,t)...
+                *(1+th4)-LoadPower(8,t)*(1+th4)-LoadPower(7,t)*(1+th4)...
+                -LoadPower(14,t)*(1+th5)-LoadPower(13,t)*(1+th5)...
+                -LoadPower(12,t)*(1+th5)-LoadPower(11,t)*(1+th5)...
+                -LoadPower(10,t)*(1+th4);
+    balance = -balance;
 
-% without the Transmision loss
-% balance0 = x1 + x2 + x3 + SolarPower(t)*(1+th1)+WindPower(t)*(1+th2)...
-%             -LoadPower(4,t)*(1+th3)-LoadPower(5,t)*...
-% 			(1+th3)-LoadPower(6,t)*(1+th3)-LoadPower(3,t)*(1+th3)...
-% 			-LoadPower(2,t)*(1+th3)-LoadPower(1,t)*(1+th5)-LoadPower(9,t)...
-% 			*(1+th4)-LoadPower(8,t)*(1+th4)-LoadPower(7,t)*(1+th4)...
-% 			-LoadPower(14,t)*(1+th5)-LoadPower(13,t)*(1+th5)...
-% 			-LoadPower(12,t)*(1+th5)-LoadPower(11,t)*(1+th5)...
-% 			-LoadPower(10,t)*(1+th4);
-        
-br = [br1, br2, br3, br4, br5, br6, br7, br8, br9, br10, br11, br12, br13]-LineLimit;
+    % without the Transmision loss
+    % balance0 = x1 + x2 + x3 + SolarPower(t)*(1+th1)+WindPower(t)*(1+th2)...
+    %             -LoadPower(4,t)*(1+th3)-LoadPower(5,t)*...
+    % 			(1+th3)-LoadPower(6,t)*(1+th3)-LoadPower(3,t)*(1+th3)...
+    % 			-LoadPower(2,t)*(1+th3)-LoadPower(1,t)*(1+th5)-LoadPower(9,t)...
+    % 			*(1+th4)-LoadPower(8,t)*(1+th4)-LoadPower(7,t)*(1+th4)...
+    % 			-LoadPower(14,t)*(1+th5)-LoadPower(13,t)*(1+th5)...
+    % 			-LoadPower(12,t)*(1+th5)-LoadPower(11,t)*(1+th5)...
+    % 			-LoadPower(10,t)*(1+th4);
 
-% Extract the Coeffents 
-ALineCons = zeros(Nl,3);
-BLineCons = zeros(Nl,5);
-bLineCons = zeros(Nl,1);
+    br = [br1, br2, br3, br4, br5, br6, br7, br8, br9, br10, br11, br12, br13]-LineLimit;
 
-th = [th1,th2,th3,th4,th5];
-x = [x1,x2,x3];
+    % Extract the Coeffents 
+    ALineCons = zeros(Nl,3);
+    BLineCons = zeros(Nl,5);
+    bLineCons = zeros(Nl,1);
 
-for i=1:Nl
-    [coef, symb] = coeffs(br(i));
+    th = [th1,th2,th3,th4,th5];
+    x = [x1,x2,x3];
+
+    for i=1:Nl
+        [coef, symb] = coeffs(br(i));
+        for j=1:5
+            tmp = find(symb==th(j), 1);
+            if isempty(tmp) == 0
+                BLineCons(i,j) = coef(tmp);
+            end
+        end
+
+        for j=1:3
+            tmp = find(symb==x(j), 1);
+            if isempty(tmp) == 0
+                ALineCons(i,j) = coef(tmp);
+            end
+        end
+
+        tmp = find(symb==1, 1);
+        if isempty(tmp) == 0
+            bLineCons(i) = coef(tmp);
+        end
+    end
+
+    BLineCons = -BLineCons;
+    bLineCons = -bLineCons;
+
+    for i = size(ALineCons,1):-1:1
+        if sum(ALineCons(i,:) == [0,0,0])==3
+            ALineCons(i,:) =[];
+            bLineCons(i,:) =[];
+            BLineCons(i,:) =[];
+        end
+    end
+
+    % Power Balance
+    A_balance = zeros(1,3);
+    B_balance = zeros(1,5);
+
+    [coef, symb] = coeffs(balance);
     for j=1:5
         tmp = find(symb==th(j), 1);
         if isempty(tmp) == 0
-            BLineCons(i,j) = coef(tmp);
+            B_balance(j) = coef(tmp);
         end
     end
-
     for j=1:3
         tmp = find(symb==x(j), 1);
         if isempty(tmp) == 0
-            ALineCons(i,j) = coef(tmp);
+            A_balance(j) = coef(tmp);
         end
     end
-    
     tmp = find(symb==1, 1);
     if isempty(tmp) == 0
-        bLineCons(i) = coef(tmp);
+        b_balance = double(coef(tmp));
     end
-end
+    B_balance = -B_balance;
+    b_balance = -b_balance;
 
-BLineCons = -BLineCons;
-bLineCons = -bLineCons;
+    AOutputCons = [eye(3);-eye(3)];
+    bOutputCons = [mpc.gen(1,PMAX);mpc.gen(3,PMAX);mpc.gen(4,PMAX);...
+        -mpc.gen(1,PMIN);-mpc.gen(3,PMIN);-mpc.gen(4,PMIN);]*1e3;
+    BOutputCons = zeros(6,5);
 
-for i = size(ALineCons,1):-1:1
-    if sum(ALineCons(i,:) == [0,0,0])==3
-        ALineCons(i,:) =[];
-        bLineCons(i,:) =[];
-        BLineCons(i,:) =[];
-    end
-end
+    A = [ALineCons;AOutputCons;A_balance];%-A_balance];
+    b = [bLineCons;bOutputCons;b_balance];%-b_balance];
+    pB =[BLineCons;BOutputCons;B_balance];%-B_balance];
 
-% Power Balance
-A_balance = zeros(1,3);
-B_balance = zeros(1,5);
+    % A = AOutputCons;
+    % b = bOutputCons;
+    % pB =BOutputCons;
 
-[coef, symb] = coeffs(balance);
-for j=1:5
-    tmp = find(symb==th(j), 1);
-    if isempty(tmp) == 0
-        B_balance(j) = coef(tmp);
-    end
-end
-for j=1:3
-    tmp = find(symb==x(j), 1);
-    if isempty(tmp) == 0
-        A_balance(j) = coef(tmp);
-    end
-end
-tmp = find(symb==1, 1);
-if isempty(tmp) == 0
-    b_balance = double(coef(tmp));
-end
-B_balance = -B_balance;
-b_balance = -b_balance;
+    % forecast error
+    % solar wind load1 load2 load3 
+    
+%     err = unifrnd(0,0.6,5,1);
+    Ath = [eye(5);-eye(5)];
+    bth = [err;err];
+    % parameters of the objective function
+    H = diag(K(:,1));
+    f = K(:,2);
+    c = sum(K(:,3));
 
-AOutputCons = [eye(3);-eye(3)];
-bOutputCons = [mpc.gen(1,PMAX);mpc.gen(3,PMAX);mpc.gen(4,PMAX);...
-    -mpc.gen(1,PMIN);-mpc.gen(3,PMIN);-mpc.gen(4,PMIN);]*1e3;
-BOutputCons = zeros(6,5);
+    problem = Opt('A',A,'pB',pB,'b',b,'H',H,'f',f,'c',c,'Ath',Ath,'bth',bth);
+    R = mpt_call_mpqp(problem);
 
-A = [ALineCons;AOutputCons;A_balance];%-A_balance];
-b = [bLineCons;bOutputCons;b_balance];%-b_balance];
-pB =[BLineCons;BOutputCons;B_balance];%-B_balance];
+    MPT_time(t) = R.stats.solveTime;
 
-% A = AOutputCons;
-% b = bOutputCons;
-% pB =BOutputCons;
+    Num_regions = R.xopt.Num;
+    
+    % Generate the Region Table
+%     MaxTable = zeros(Num_regions,5);
+%     MinTable = zeros(Num_regions,5);
+%     TH = sdpvar(5,1);
+%     % Optimaize in every dimision
+%     for j=1:5
+%         Obj = TH(j);
+%         for k=1:Num_regions
+%             Cons = [R.xopt.Set(k,1).A*TH <= R.xopt.Set(k,1).b];
+%             optimize(Cons,Obj);
+%             MinTable(k,j)=double(Obj);
+%             optimize(Cons,-Obj);
+%             MaxTable(k,j)=double(Obj);
+%         end
+%     end
 
-% forecast error
-% solar wind load1 load2 load3 
-err = 0.8;
-% err = [err; err;err; err; err;];
-err = unifrnd(0,0.6,5,1);
-Ath = [eye(5);-eye(5)];
-bth = [err;err];
-% parameters of the objective function
-H = diag(K(:,1));
-f = K(:,2);
-c = sum(K(:,3));
+    % generate the real values of power
 
-problem = Opt('A',A,'pB',pB,'b',b,'H',H,'f',f,'c',c,'Ath',Ath,'bth',bth);
-R = mpt_call_mpqp(problem);
+    th1_ = unifrnd(-err(1),err(1));
+    th2_ = unifrnd(-err(2),err(2));
+    th3_ = unifrnd(-err(3),err(3));
+    th4_ = unifrnd(-err(4),err(4));
+    th5_ = unifrnd(-err(5),err(5));
+    th_ = [th1_;th2_;th3_;th4_;th5_;];
 
-MPT_time(t) = R.stats.solveTime;
+    RealSolarPower(t) = SolarPower(t)*(1+th1_);
+    RealWindPower(t) = WindPower(t)*(1+th2_);
 
-Num_regions = R.xopt.Num;
+    RealLoadPower(:,t)=[LoadPower(1,t)*(1+th5_);
+                   LoadPower(2,t)*(1+th3_);
+                   LoadPower(3,t)*(1+th3_);
+                   LoadPower(4,t)*(1+th3_);
+                   LoadPower(5,t)*(1+th3_);
+                   LoadPower(6,t)*(1+th3_);
+                   LoadPower(7,t)*(1+th4_);
+                   LoadPower(8,t)*(1+th4_);
+                   LoadPower(9,t)*(1+th4_);
+                   LoadPower(10,t)*(1+th4_);
+                   LoadPower(11,t)*(1+th5_);
+                   LoadPower(12,t)*(1+th5_);
+                   LoadPower(13,t)*(1+th5_);
+                   LoadPower(14,t)*(1+th5_);];
+    
 
-% Generate the Region Table
-
-MaxTable = zeros(Num_regions,5);
-MinTable = zeros(Num_regions,5);
-
-P = sdpvar(5,1);
-% Optimaize in every dimision
-for j=1:5
-	Obj = P(j);
-	for k=1:Num_regions
-		Cons = [R.xopt.Set(k,1).A*P <= R.xopt.Set(k,1).b];
-		optimize(Cons,Obj);
-		MinTable(k,j)=double(Obj);
-		optimize(Cons,-Obj);
-		MaxTable(k,j)=double(Obj);
-	end
-end
-
-% generate the real values of power
-
-th1_ = unifrnd(-err(1),err(1));
-th2_ = unifrnd(-err(2),err(2));
-th3_ = unifrnd(-err(3),err(3));
-th4_ = unifrnd(-err(4),err(4));
-th5_ = unifrnd(-err(5),err(5));
-th_ = [th1_;th2_;th3_;th4_;th5_;];
-
-% RealSolarPower = SolarPower*(1+th1_);
-% RealWindPower = WindPower*(1+th2_);
+%     tic            
+%     Realth = ones(Num_regions,1) * th_';
+%     Credit = (Realth <= MaxTable)&(Realth >= MinTable);
+%     Credit = sum(Credit,2);
+%     Credit = find(Credit==5);
 % 
-% RealLoadPower=[LoadPower(1,t)*(1+th5_);
-% 			   LoadPower(2,t)*(1+th3_);
-% 			   LoadPower(3,t)*(1+th3_);
-% 			   LoadPower(4,t)*(1+th3_);
-% 			   LoadPower(5,t)*(1+th3_);
-% 			   LoadPower(6,t)*(1+th3_);
-% 			   LoadPower(7,t)*(1+th4_);
-% 			   LoadPower(8,t)*(1+th4_);
-% 			   LoadPower(9,t)*(1+th4_);
-% 			   LoadPower(10,t)*(1+th4_);
-% 			   LoadPower(11,t)*(1+th5_);
-% 			   LoadPower(12,t)*(1+th5_);
-% 			   LoadPower(13,t)*(1+th5_);
-% 			   LoadPower(14,t)*(1+th5_);];
+%     if size(Credit,1)==1
+%         j = Credit;
+%     else
+%         for j = Credit'
+%             if sum(R.xopt.Set(j,1).A*th_ <= R.xopt.Set(j,1).b) == size(R.xopt.Set(j,1).A,1)
+%     % 			j
+%                 break
+%             end
+%         end
+%     end
+%     X_mpt_new_array(:,t) = R.mpqpsol.Fi{1,j}*th_+R.mpqpsol.Gi{1,j};
+%     time_mpt_new_array(t) = toc;   
 
-clc
-R.xopt.Num
-tic                  
-Realth = ones(Num_regions,1) * th_';
-Credit = (Realth <= MaxTable)&(Realth >= MinTable);
-Credit = sum(Credit,2);
-Credit = find(Credit==5);
-
-if size(Credit,1)==1
-	j = Credit;
-else
-	for j = Credit'
-		if sum(R.xopt.Set(j,1).A*th_ <= R.xopt.Set(j,1).b) == size(R.xopt.Set(j,1).A,1)
-% 			j
-			break
-		end
-	end
+    % Conventional one-by-one judgment
+    tic
+    for j=1:Num_regions
+        if sum(R.xopt.Set(j,1).A*th_ <= R.xopt.Set(j,1).b) == size(R.xopt.Set(j,1).A,1)
+    % 		j
+            break
+        end
+    end
+    X_mpt_con_array(:,t) = R.mpqpsol.Fi{1,j}*th_+R.mpqpsol.Gi{1,j};
+    time_mpt_con_array(t) = toc;
+    
+    % Credit
+    % Check the result by yalmip
+    tic
+    X = sdpvar(3,1);
+    Obj = 0.5*X'*H*X + f'*X + c;
+    Cons = A*X <= b+pB*th_;
+    optimize(Cons,Obj);
+    X_yalmip_array(:,t) = double(X);
+    time_yalmip_array(t) = toc;
+    clc
 end
-x = R.mpqpsol.Fi{1,j}*th_+R.mpqpsol.Gi{1,j}
-toc
 
-% Conventional one-by-one judgment
-tic
-for j=1:Num_regions
-	if sum(R.xopt.Set(j,1).A*th_ <= R.xopt.Set(j,1).b) == size(R.xopt.Set(j,1).A,1)
-% 		j
-		break
-	end
-end
-x = R.mpqpsol.Fi{1,j}*th_+R.mpqpsol.Gi{1,j}
-toc
+figure(1)
+plot(time_mpt_new_array)
+hold on
+plot(time_mpt_con_array)
+plot(time_yalmip_array)
+title('The Comparasion of Computing time')
+legend('Speed up Search Method with MPT',...
+    'Conventional Search Method with MPT',...
+   'Optimization with Yalmip')
 
-% Credit
+figure(2)
+plot(X_yalmip_array(1,:))
+hold on
+plot(X_yalmip_array(2,:))
+plot(X_yalmip_array(3,:))
+title('Output Power of Dispatchble DGs with Yalmip')
+legend('Micro Turbine','Fuel Cell','Diesel Engine')
 
-% Check the result by yalmip
+figure(3)
+plot(X_mpt_con_array(1,:))
+hold on
+plot(X_mpt_con_array(2,:))
+plot(X_mpt_con_array(3,:))
+title('Output Power of Dispatchble DGs wiht MPT')
+legend('Micro Turbine','Fuel Cell','Diesel Engine')
 
-tic
-P=sdpvar(3,1);
-Obj = 0.5*P'*H*P + f'*P + c;
-Cons = A*P <= b+pB*th_;
-optimize(Cons,Obj);
-P = double(P)
-toc
-
+figure(4)
+plot(X_mpt_new_array(1,:))
+hold on
+plot(X_mpt_new_array(2,:))
+plot(X_mpt_new_array(3,:))
+title('Output Power of Dispatchble DGs with New Searching method')
+legend('Micro Turbine','Fuel Cell','Diesel Engine')
 
