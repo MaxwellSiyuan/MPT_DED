@@ -7,12 +7,12 @@ WindPower=[8.70,9.50 ,10.27,16.66 ,7.22 ,4.91,14.66 ,26.56 ,...
     20.88 ,17.85 ,12.80 ,18.65 ,14.35 ,10.35 ,8.26,5.71 ,8.44,...
     16.87 ,20.75 ,23.17 ,28.15 ,21.31 ,10.07 ,7.58]*2;
 SolarPower=[zeros(7,1);1;3;6;9;12;13;12.9;10.5;9;5;3;1;zeros(5,1)]'*4;
-Load=[140;150;155;160;165;170;175;190;240;220;240;250;240;220;200; ...
-    180;170;185;200;240;225;190;160;145]'*1.1;
+Load=[140;150;155;160;165;170;175;185;200;220;230;235;230;220;207; ...
+    200;195;193;203;217;220;190;160;145]'+60;
 
 Nd = 14;
 Nl = 13;
-LineLimit = 120;
+LineLimit = 150;
 
 hour = 1:24;
 Tnode = 0.25:0.25:24;
@@ -20,14 +20,14 @@ WindPower = interp1 (hour,WindPower,Tnode,'pchip');
 SolarPower = interp1 (hour,SolarPower,Tnode,'pchip');
 Load = interp1 (hour,Load,Tnode,'pchip');
 
-LoadPower = zeros(Nd,96);
+LoadPower = zeros(Nd,96) + normrnd(-10,7,Nd,96) ;
 LoadHeavy = Load *6/14 / 6;
 LoadLight = Load *8/14 / 8;
 for i=1:14
     if i>=4 && i<=9
-        LoadPower(i,:) = LoadHeavy + unifrnd(-5,2,1,96);
+        LoadPower(i,:) = LoadHeavy ;
     else
-        LoadPower(i,:) = LoadLight + unifrnd(-3,1,1,96);
+        LoadPower(i,:) = LoadLight ;
     end
 %     plot(Tnode,LoadPower(i,:))
 %     hold on
@@ -82,7 +82,7 @@ for i=1:96
 end
 
 % plot DG output
-figure(2)
+figure(1)
 subplot(3,1,1)
 plot(Tnode,DGout(1,:))
 hold on
@@ -104,3 +104,11 @@ title('Output Power of Fuel Cell')
 
 clear Obj Cons x1 x2 x3 ans options br
 save('GridData.mat')
+
+figure(2)
+plot((sum(mpc.gen([1,3,4],PMAX)*1e3)+WindPower+SolarPower),'r-')
+hold on
+plot(sum(LoadPower))
+plot((sum(mpc.gen([1,3,4],PMIN)*1e3)+WindPower+SolarPower),'r-')
+
+

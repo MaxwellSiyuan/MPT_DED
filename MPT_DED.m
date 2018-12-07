@@ -6,7 +6,7 @@ mpc = loadcase('node14case');
 define_constants;
 
 % forecast error
-err = 0.4;
+err = 0.5;
 err = ones(8,1)*err;
 
 % output 
@@ -39,12 +39,11 @@ time_mpt_con_array = zeros(1,96);
 time_mpt_new_array = zeros(1,96);
 time_yalmip_array = zeros(1,96);
 
-% t = 55;
+t = 53;
 for t=1:96
     t
     
     syms br1 br2 br3 br4 br5 br6 br7 br8 br9 br10 br11 br12 br13
-    
 	nd4=br3-brloss(br3,3,3,t)-LoadPower(4,t)*(1+th7)+x1;
 	nd5=br4-brloss(br4,4,3,t)-LoadPower(5,t)*(1+th7)+SolarPower(t)*(1+th1);
 	nd6=br5-brloss(br5,5,3,t)-LoadPower(6,t)*(1+th3);
@@ -71,24 +70,15 @@ for t=1:96
                 -brloss(br2,2,2,t)-brloss(br1,1,1,t)-brloss(br9,9,9,t)...
                 -brloss(br8,8,7,t)-brloss(br7,7,7,t)-brloss(br6,6,1,t)...
                 -brloss(br13,13,12,t)-brloss(br12,12,12,t)-brloss(br11,11,11,t)...
-                -brloss(br10,10,1,t)-LoadPower(4,t)*(1+th3)-LoadPower(5,t)*...
-                (1+th3)-LoadPower(6,t)*(1+th3)-LoadPower(3,t)*(1+th3)...
-                -LoadPower(2,t)*(1+th3)-LoadPower(1,t)*(1+th5)-LoadPower(9,t)...
-                *(1+th4)-LoadPower(8,t)*(1+th4)-LoadPower(7,t)*(1+th4)...
-                -LoadPower(14,t)*(1+th5)-LoadPower(13,t)*(1+th5)...
-                -LoadPower(12,t)*(1+th5)-LoadPower(11,t)*(1+th5)...
-                -LoadPower(10,t)*(1+th4);
-    balance = -balance;
+                -brloss(br10,10,1,t)-LoadPower(1,t)*(1+th8)-LoadPower(2,t)*(1+th4)-...
+				LoadPower(3,t)*(1+th3)-LoadPower(4,t)*(1+th7)-...
+				LoadPower(5,t)*(1+th7)-LoadPower(6,t)*(1+th3)-...
+				LoadPower(7,t)*(1+th7)-LoadPower(8,t)*(1+th7)-...
+				LoadPower(9,t)*(1+th5)-LoadPower(10,t)*(1+th7)-...
+				LoadPower(11,t)*(1+th6)-LoadPower(12,t)*(1+th6)-...
+				LoadPower(13,t)*(1+th6)-LoadPower(14,t)*(1+th6);
 
-    % without the Transmision loss
-    % balance0 = x1 + x2 + x3 + SolarPower(t)*(1+th1)+WindPower(t)*(1+th2)...
-    %             -LoadPower(4,t)*(1+th3)-LoadPower(5,t)*...
-    % 			(1+th3)-LoadPower(6,t)*(1+th3)-LoadPower(3,t)*(1+th3)...
-    % 			-LoadPower(2,t)*(1+th3)-LoadPower(1,t)*(1+th5)-LoadPower(9,t)...
-    % 			*(1+th4)-LoadPower(8,t)*(1+th4)-LoadPower(7,t)*(1+th4)...
-    % 			-LoadPower(14,t)*(1+th5)-LoadPower(13,t)*(1+th5)...
-    % 			-LoadPower(12,t)*(1+th5)-LoadPower(11,t)*(1+th5)...
-    % 			-LoadPower(10,t)*(1+th4);
+    balance = -balance;
 
     br = [br1, br2, br3, br4, br5, br6, br7, br8, br9, br10, br11, br12, br13]-LineLimit;
 
@@ -161,18 +151,21 @@ for t=1:96
     bOutputCons = [mpc.gen(1,PMAX);mpc.gen(3,PMAX);mpc.gen(4,PMAX);...
         -mpc.gen(1,PMIN);-mpc.gen(3,PMIN);-mpc.gen(4,PMIN);]*1e3;
     BOutputCons = zeros(6,8);
-
-    A = [ALineCons;AOutputCons;A_balance];%-A_balance];
-    b = [bLineCons;bOutputCons;b_balance];%-b_balance];
-    pB =[BLineCons;BOutputCons;B_balance];%-B_balance];
-
-    % A = AOutputCons;
-    % b = bOutputCons;
-    % pB =BOutputCons;
-
-    % forecast error
-    % solar wind load1 load2 load3 
     
+    RampLimit = [80;140;110]/4;
+    ARampCons = [eye(3);-eye(3)];
+    if t~=1
+        
+        bRampCons = [RampLimit+X_mpt_con_array(:,t-1);RampLimit-X_mpt_con_array(:,t-1)];
+    else
+        bRampCons = [RampLimit+[55;65;53];RampLimit-[55;65;53]];
+    end
+    BRampCons = zeros(6,8);
+
+    A = [ALineCons;AOutputCons;A_balance;ARampCons];
+    b = [bLineCons;bOutputCons;b_balance;bRampCons];
+    pB =[BLineCons;BOutputCons;B_balance;BRampCons];
+   
 %     err = unifrnd(0,0.6,5,1);
     Ath = [eye(8);-eye(8)];
     bth = ones(size(Ath,1),1);
@@ -189,34 +182,36 @@ for t=1:96
     Num_regions = R.xopt.Num;
     
    % generate the real values of power
-
+    
     th1_ = unifrnd(-err(1),err(1));
     th2_ = unifrnd(-err(2),err(2));
     th3_ = unifrnd(-err(3),err(3));
-    th4_ = unifrnd(-err(4),err(4));
-    th5_ = unifrnd(-err(5),err(5));
-    th6_ = unifrnd(-err(6),err(6));
-    th7_ = unifrnd(-err(7),err(7));
-    th8_ = unifrnd(-err(8),err(8));
+    th4_ = unifrnd(-err(4)/2,err(4)/2);
+    th5_ = unifrnd(-err(5)/1,err(5)/1);
+    th6_ = unifrnd(-err(6)/4,err(6)/4);
+    th7_ = unifrnd(-err(7)/4,err(7)/4);
+    th8_ = unifrnd(-err(8)/1,err(8)/1);
     th_ = [th1_;th2_;th3_;th4_;th5_;th6_;th7_;th8_;];
 
     RealSolarPower(t) = SolarPower(t)*(1+th1_);
     RealWindPower(t) = WindPower(t)*(1+th2_);
 
     RealLoadPower(:,t)=[LoadPower(1,t)*(1+th8_);
-                   LoadPower(2,t)*(1+th4_);
-                   LoadPower(3,t)*(1+th3_);
-                   LoadPower(4,t)*(1+th7_);
-                   LoadPower(5,t)*(1+th7_);
-                   LoadPower(6,t)*(1+th3_);
-                   LoadPower(7,t)*(1+th7_);
-                   LoadPower(8,t)*(1+th7_);
-                   LoadPower(9,t)*(1+th5_);
-                   LoadPower(10,t)*(1+th7_);
-                   LoadPower(11,t)*(1+th6_);
-                   LoadPower(12,t)*(1+th6_);
-                   LoadPower(13,t)*(1+th6_);
-                   LoadPower(14,t)*(1+th6_);];
+	                   LoadPower(2,t)*(1+th4_);
+	                   LoadPower(3,t)*(1+th3_);
+	                   LoadPower(4,t)*(1+th7_);
+	                   LoadPower(5,t)*(1+th7_);
+	                   LoadPower(6,t)*(1+th3_);
+	                   LoadPower(7,t)*(1+th7_);
+	                   LoadPower(8,t)*(1+th7_);
+	                   LoadPower(9,t)*(1+th5_);
+	                   LoadPower(10,t)*(1+th7_);
+	                   LoadPower(11,t)*(1+th6_);
+	                   LoadPower(12,t)*(1+th6_);
+	                   LoadPower(13,t)*(1+th6_);
+	                   LoadPower(14,t)*(1+th6_);];
+
+
     
  % Generate the Region Table
 %     MaxTable = zeros(Num_regions,8);
@@ -258,12 +253,12 @@ for t=1:96
     tic
     for j=1:Num_regions
         if sum(R.xopt.Set(j,1).A*th_ <= R.xopt.Set(j,1).b) == size(R.xopt.Set(j,1).A,1)
-%     		j
+    		j
             break
         end
     end
     X_mpt_con_array(:,t) = R.mpqpsol.Fi{1,j}*th_+R.mpqpsol.Gi{1,j};
-%     R.mpqpsol.Fi{1,j}*th_+R.mpqpsol.Gi{1,j}
+    R.mpqpsol.Fi{1,j}*th_+R.mpqpsol.Gi{1,j}
     time_mpt_con_array(t) = toc;
     
     % Check the result by yalmip
@@ -275,7 +270,7 @@ for t=1:96
 %     X_yalmip_array(:,t) = double(X);
 %     double(X)
 %     time_yalmip_array(t) = toc;
-    clc
+%     clc
 end
 
 figure(1)
@@ -288,7 +283,7 @@ legend('Speed up Search Method with MPT',...
     'Conventional Search Method with MPT',...
    'Optimization with Yalmip')
 
-figure(2)
+figure
 plot(X_yalmip_array(1,:))
 hold on
 plot(X_yalmip_array(2,:))
@@ -296,7 +291,7 @@ plot(X_yalmip_array(3,:))
 title('Output Power of Dispatchble DGs with Yalmip')
 legend('Micro Turbine','Diesel Engine','Fuel Cell')
 
-figure(3)
+figure
 plot(X_mpt_con_array(1,:))
 hold on
 plot(X_mpt_con_array(2,:))
@@ -317,3 +312,12 @@ plot(sum(X_mpt_con_array)+RealSolarPower+RealWindPower)
 hold on
 plot(sum(RealLoadPower))
 
+save('solution0.5.mat')
+
+% figure(6)
+% plot(sum(RealLoadPower)-RealSolarPower-RealWindPower)
+% hold on
+% plot(sum(X_yalmip_array)+RealSolarPower+RealWindPower)
+
+% sum(X_mpt_con_array(:,t))+RealSolarPower(t)+RealWindPower(t)
+% sum(RealLoadPower(:,t))

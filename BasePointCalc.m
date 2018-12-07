@@ -12,7 +12,6 @@ genQ = zeros(5,96);
 mpc = loadcase('node14case');
 define_constants;
 
-i=84;
 for i=1:96
     mpc.bus(:,[PD QD]) = [LoadPower(:,i) LoadQ(:,i)];
     mpc.bus(:, [PD, QD]) = mpc.bus(:, [PD, QD]) / 1e3;
