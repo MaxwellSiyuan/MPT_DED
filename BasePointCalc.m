@@ -20,6 +20,11 @@ for i=1:96
     mpc.gen(:,PG) = [DGout(1,i);SolarPower(i);DGout(2,i);DGout(3,i);WindPower(i)];
     mpc.gen(:,PG) =  mpc.gen(:,PG) / 1e3 ;
     
+    mpc.gen(:,QMAX) = [DGout(1,i);SolarPower(i);DGout(2,i);DGout(3,i);WindPower(i)];
+    mpc.gen(:,QMAX) =  mpc.gen(:,QMAX) / 1e3 ;
+    mpc.gen(:,QMIN) = -mpc.gen(:,QMAX);
+    
+    
     results = runpf(mpc);
     
     V0(:,i) = results.bus(:,VM);
@@ -42,29 +47,30 @@ for i=1:5
     plot(genP(i,:))
     hold on
 end
-legend('MT','PV','FC','DE','WT')
+legend('MT','PV','DE','FC','WT')
 title('Output of active power')
-% figure(2)
-% plot(sum(genP))
-% hold on
-% plot(LoadSum)
-% legend('GE','LD')
 
-figure(3)
+figure(2)
 for i=1:5
     plot(genQ(i,:))
     hold on
 end
-legend('MT','PV','FC','DE','WT')
+legend('MT','PV','DE','FC','WT')
 title('Output of reactive power')
 
-figure(4)
+figure(3)
 for i= 1:13
     plot(P0(i,:))
     hold on
 end
 legend('1','2','3','4','5','6','7','8','9','10','11','12','13')
 title('Branch Flow')
+
+figure(4)
+plot(sum(genP))
+hold on
+plot(LoadSum)
+legend('GE','LD')
 
 % plot wind solar power data
 % subplot(3,1,1)

@@ -5,14 +5,14 @@ define_constants;
 
 WindPower=[8.70,9.50 ,10.27,16.66 ,7.22 ,4.91,14.66 ,26.56 ,...
     20.88 ,17.85 ,12.80 ,18.65 ,14.35 ,10.35 ,8.26,5.71 ,8.44,...
-    16.87 ,20.75 ,23.17 ,28.15 ,21.31 ,10.07 ,7.58]*5;
-SolarPower=[zeros(7,1);1;3;6;9;12;13;12.9;10.5;9;5;3;1;zeros(5,1)]'*8;
+    16.87 ,20.75 ,23.17 ,28.15 ,21.31 ,10.07 ,7.58]*2;
+SolarPower=[zeros(7,1);1;3;6;9;12;13;12.9;10.5;9;5;3;1;zeros(5,1)]'*4;
 Load=[140;150;155;160;165;170;175;190;240;220;240;250;240;220;200; ...
-    180;170;185;200;240;225;190;160;145]'*1.5;
+    180;170;185;200;240;225;190;160;145]'*1.1;
 
 Nd = 14;
 Nl = 13;
-LineLimit = 140;
+LineLimit = 120;
 
 hour = 1:24;
 Tnode = 0.25:0.25:24;
@@ -21,8 +21,8 @@ SolarPower = interp1 (hour,SolarPower,Tnode,'pchip');
 Load = interp1 (hour,Load,Tnode,'pchip');
 
 LoadPower = zeros(Nd,96);
-LoadHeavy = Load *3/5 / 6;
-LoadLight = Load *2/5 / 8;
+LoadHeavy = Load *6/14 / 6;
+LoadLight = Load *8/14 / 8;
 for i=1:14
     if i>=4 && i<=9
         LoadPower(i,:) = LoadHeavy + unifrnd(-5,2,1,96);
@@ -38,12 +38,12 @@ LoadQ = LoadPower ./ unifrnd(4,8,14,96);
 LoadSum = sum(LoadPower);
 
 % DG1 (MT) node4
-% DG2 (FC) node7
-% DG3 (DE) node8
+% DG2 (DE) node7
+% DG3 (FC) node8
 DGout = zeros(3,96); 
-K = [0.0001 0.0417 0.023
-     0.0001 0.0440 0.021
-     0.0001 0.0435 0.019];
+K = [0.0001 0.0435 0.023  % MT
+     0.0001 0.0417 0.019  % DE
+     0.0001 0.0440 0.021];  % FC
 options=sdpsettings('solver', 'cplex');
 sdpvar x1 x2 x3
 Obj = K(1,1)*x1^2 + K(1,2)*x1 + K(1,3) +...
@@ -94,13 +94,13 @@ plot(Tnode,DGout(2,:))
 hold on
 plot(Tnode,ones(1,96)*mpc.gen(3,PMIN)*1e3,'r-')
 plot(Tnode,ones(1,96)*mpc.gen(3,PMAX)*1e3,'r-')
-title('Output Power of Fuel Cell')
+title('Output Power of Diesel Engine')
 subplot(3,1,3)
 plot(Tnode,DGout(3,:))
 hold on
 plot(Tnode,ones(1,96)*mpc.gen(4,PMIN)*1e3,'r-')
 plot(Tnode,ones(1,96)*mpc.gen(4,PMAX)*1e3,'r-')
-title('Output Power of Diesel Engine')
+title('Output Power of Fuel Cell')
 
 clear Obj Cons x1 x2 x3 ans options br
 save('GridData.mat')
