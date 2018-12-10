@@ -6,7 +6,7 @@ mpc = loadcase('node14case');
 define_constants;
 
 % forecast error
-err = 0.5;
+err = 0.2;
 err = ones(8,1)*err;
 
 % output 
@@ -23,10 +23,6 @@ syms x1 x2 x3
 brloss = @(bri,i,j,t) (P0(i,t)^2+2*P0(i,t)*(bri-...
 P0(i,t))+Q0(i,t)^2)/V0(j,t)^2 * results.branch(i,BR_R) / 1e3;
 
-MPT_time = zeros(96);
-Decision_time = zeros(96);
-Option_time = zeros(96);
-
 RealSolarPower = zeros(1,96);
 RealWindPower =  zeros(1,96);
 RealLoadPower = zeros(14,96);
@@ -35,6 +31,8 @@ RealLoadPower = zeros(14,96);
 X_mpt_con_array = zeros(3,96);
 X_mpt_new_array = zeros(3,96);
 X_yalmip_array = zeros(3,96);
+
+MPT_time = zeros(1,96);
 time_mpt_con_array = zeros(1,96);
 time_mpt_new_array = zeros(1,96);
 time_yalmip_array = zeros(1,96);
@@ -211,9 +209,7 @@ for t=1:96
 	                   LoadPower(13,t)*(1+th6_);
 	                   LoadPower(14,t)*(1+th6_);];
 
-
-    
- % Generate the Region Table
+ %  Generate the Region Table
 %     MaxTable = zeros(Num_regions,8);
 %     MinTable = zeros(Num_regions,8);
 %     TH = sdpvar(8,1);
@@ -312,7 +308,7 @@ plot(sum(X_mpt_con_array)+RealSolarPower+RealWindPower)
 hold on
 plot(sum(RealLoadPower))
 
-save('solution0.5.mat')
+save('solution0.20.mat')
 
 % figure(6)
 % plot(sum(RealLoadPower)-RealSolarPower-RealWindPower)
