@@ -29,6 +29,7 @@ RealLoadPower = zeros(14,96);
 
 % t = 50;
 X_mpt_con_array = zeros(3,96);
+X_mpt_con_array_f = zeros(2,96);
 X_mpt_new_array = zeros(3,96);
 X_yalmip_array = zeros(3,96);
 
@@ -40,6 +41,18 @@ time_yalmip_array = zeros(1,96);
 t = 53;
 for t=1:96
     t
+    
+     % generate the real values of power
+    rand('seed',t)
+    th1_ = (rand(1,1)*2 - 1)*err(1);
+    th2_ = (rand(1,1)*2 - 1)*err(2);
+	th3_ = (rand(1,1)*2 - 1)*err(3);
+	th4_ = (rand(1,1)*2 - 1)*err(4)/2;
+	th5_ = (rand(1,1)*2 - 1)*err(5)/1;
+	th6_ = (rand(1,1)*2 - 1)*err(6)/4;
+	th7_ = (rand(1,1)*2 - 1)*err(7)/4;
+	th8_ = (rand(1,1)*2 - 1)*err(8)/1;
+    th_ = [th1_;th2_;th3_;th4_;th5_;th6_;th7_;th8_;];
     
     syms br1 br2 br3 br4 br5 br6 br7 br8 br9 br10 br11 br12 br13
 	nd4=br3-brloss(br3,3,3,t)-LoadPower(4,t)*(1+th7)+x1;
@@ -160,9 +173,14 @@ for t=1:96
     end
     BRampCons = zeros(6,8);
 
-    A = [ALineCons;AOutputCons;A_balance;ARampCons];
-    b = [bLineCons;bOutputCons;b_balance;bRampCons];
-    pB =[BLineCons;BOutputCons;B_balance;BRampCons];
+%     A = [ALineCons;AOutputCons;A_balance;ARampCons];
+%     b = [bLineCons;bOutputCons;b_balance;bRampCons];
+%     pB =[BLineCons;BOutputCons;B_balance;BRampCons];
+
+    A = [ALineCons;AOutputCons;A_balance;];%ARampCons];
+    b = [bLineCons;bOutputCons;b_balance;];%bRampCons];
+    pB =[BLineCons;BOutputCons;B_balance;];%BRampCons];
+
    
 %     err = unifrnd(0,0.6,5,1);
     Ath = [eye(8);-eye(8)];
@@ -172,103 +190,48 @@ for t=1:96
     f = K(:,2);
     c = sum(K(:,3));
 
-    problem = Opt('A',A,'pB',pB,'b',b,'H',H,'f',f,'c',c,'Ath',Ath,'bth',bth);
-    R = mpt_call_mpqp(problem);
-
-    MPT_time(t) = R.stats.solveTime;
-
-    Num_regions = R.xopt.Num;
-    
-   % generate the real values of power
-    
-    rand('seed',t)
-    th1_ = (rand(1,1)*2 - 1)*err(1);
-    th2_ = (rand(1,1)*2 - 1)*err(2);
-    th3_ = (rand(1,1)*2 - 1)*err(3);
-    th4_ = (rand(1,1)*2 - 1)*err(4)/2;
-    th5_ = (rand(1,1)*2 - 1)*err(5)/1;
-    th6_ = (rand(1,1)*2 - 1)*err(6)/4;
-    th7_ = (rand(1,1)*2 - 1)*err(7)/4;
-    th8_ = (rand(1,1)*2 - 1)*err(8)/1;
-    th_ = [th1_;th2_;th3_;th4_;th5_;th6_;th7_;th8_;];
-
-    RealSolarPower(t) = SolarPower(t)*(1+th1_);
-    RealWindPower(t) = WindPower(t)*(1+th2_);
-
-    RealLoadPower(:,t)=[LoadPower(1,t)*(1+th8_);
-	                   LoadPower(2,t)*(1+th4_);
-	                   LoadPower(3,t)*(1+th3_);
-	                   LoadPower(4,t)*(1+th7_);
-	                   LoadPower(5,t)*(1+th7_);
-	                   LoadPower(6,t)*(1+th3_);
-	                   LoadPower(7,t)*(1+th7_);
-	                   LoadPower(8,t)*(1+th7_);
-	                   LoadPower(9,t)*(1+th5_);
-	                   LoadPower(10,t)*(1+th7_);
-	                   LoadPower(11,t)*(1+th6_);
-	                   LoadPower(12,t)*(1+th6_);
-	                   LoadPower(13,t)*(1+th6_);
-	                   LoadPower(14,t)*(1+th6_);];
-
- %  Generate the Region Table
-%     MaxTable = zeros(Num_regions,8);
-%     MinTable = zeros(Num_regions,8);
-%     TH = sdpvar(8,1);
-%     % Optimaize in every dimision
-%     for j=1:8
-%         Obj = TH(j);
-%         for k=1:Num_regions
-%             Cons = [R.xopt.Set(k,1).A*TH <= R.xopt.Set(k,1).b];
-%             optimize(Cons,Obj);
-%             MinTable(k,j)=double(Obj);
-%             optimize(Cons,-Obj);
-%             MaxTable(k,j)=double(Obj);
+%     problem = Opt('A',A,'pB',pB,'b',b,'H',H,'f',f,'c',c,'Ath',Ath,'bth',bth);
+%     R = mpt_call_mpqp(problem);
+%     
+%     Num_regions = R.xopt.Num;
+%     for j=1:Num_regions
+%         if sum(R.xopt.Set(j,1).A*th_ <= R.xopt.Set(j,1).b) == size(R.xopt.Set(j,1).A,1)
+%             j
+%             break
 %         end
 %     end
-% 
-%     tic            
-%     Realth = ones(Num_regions,1) * th_';
-%     Credit = (Realth <= MaxTable)&(Realth >= MinTable);
-%     Credit = sum(Credit,2);
-%     Credit = find(Credit==8);
-% 
-%     if size(Credit,1)==1
-%         j = Credit;
-%     else
-%         for j = Credit'
-%             if sum(R.xopt.Set(j,1).A*th_ <= R.xopt.Set(j,1).b) == size(R.xopt.Set(j,1).A,1)
-%     			j
-%                 break
-%             end
-%         end
-%     end
-%     X_mpt_new_array(:,t) = R.mpqpsol.Fi{1,j}*th_+R.mpqpsol.Gi{1,j};
+%     X_mpt_con_array(:,t) = R.mpqpsol.Fi{1,j}*th_+R.mpqpsol.Gi{1,j};
 %     R.mpqpsol.Fi{1,j}*th_+R.mpqpsol.Gi{1,j}
-%     time_mpt_new_array(t) = toc;   
 
-    % Conventional one-by-one judgment
-    tic
-    for j=1:Num_regions
-        if sum(R.xopt.Set(j,1).A*th_ <= R.xopt.Set(j,1).b) == size(R.xopt.Set(j,1).A,1)
+    Af = A(:,1:2);
+    pBf = pB;
+    bf = b;
+    for i = size(Af,1):-1:1
+        if sum(Af(i,:) == zeros(1,2))==2
+            Af(i,:)=[];
+            pBf(i,:)=[];
+            bf(i,:)=[];
+        end
+    end
+    Hf = diag(K(1:2,1));
+    ff = K(1:2,2);
+    cf = sum(K(1:2,3));
+    
+    problemf = Opt('A',Af,'pB',pBf,'b',bf,'H',Hf,'f',ff,'c',cf,'Ath',Ath,'bth',bth);
+    Rf = mpt_call_mpqp(problemf);
+    
+    Num_regions_f = Rf.xopt.Num;
+    for j=1:Num_regions_f
+        if sum(Rf.xopt.Set(j,1).A*th_ <= Rf.xopt.Set(j,1).b) == size(Rf.xopt.Set(j,1).A,1)
     		j
             break
         end
     end
-    X_mpt_con_array(:,t) = R.mpqpsol.Fi{1,j}*th_+R.mpqpsol.Gi{1,j};
-    R.mpqpsol.Fi{1,j}*th_+R.mpqpsol.Gi{1,j}
-    time_mpt_con_array(t) = toc;
-    
-    % Check the result by yalmip
-%     tic
-%     X = sdpvar(3,1);
-%     Obj = 0.5*X'*H*X + f'*X + c;
-%     Cons = A*X <= b+pB*th_;
-%     optimize(Cons,Obj);
-%     X_yalmip_array(:,t) = double(X);
-%     double(X)
-%     time_yalmip_array(t) = toc;
-%     clc
+    X_mpt_con_array_f(:,t) = Rf.mpqpsol.Fi{1,j}*th_+Rf.mpqpsol.Gi{1,j};
+    Rf.mpqpsol.Fi{1,j}*th_+Rf.mpqpsol.Gi{1,j}
 end
+
+save('solution0.2f.mat')
 
 figure(1)
 plot(time_mpt_new_array)
@@ -309,12 +272,4 @@ plot(sum(X_mpt_con_array)+RealSolarPower+RealWindPower)
 hold on
 plot(sum(RealLoadPower))
 
-save('solution0.20.mat')
 
-% figure(6)
-% plot(sum(RealLoadPower)-RealSolarPower-RealWindPower)
-% hold on
-% plot(sum(X_yalmip_array)+RealSolarPower+RealWindPower)
-
-% sum(X_mpt_con_array(:,t))+RealSolarPower(t)+RealWindPower(t)
-% sum(RealLoadPower(:,t))
