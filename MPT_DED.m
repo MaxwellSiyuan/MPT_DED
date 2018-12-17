@@ -259,15 +259,18 @@ for t=1:96
     time_mpt_con_array(t) = toc;
     
     % Check the result by yalmip
-%     tic
-%     X = sdpvar(3,1);
-%     Obj = 0.5*X'*H*X + f'*X + c;
-%     Cons = A*X <= b+pB*th_;
-%     optimize(Cons,Obj);
-%     X_yalmip_array(:,t) = double(X);
-%     double(X)
-%     time_yalmip_array(t) = toc;
-%     clc
+    
+    X = sdpvar(3,1);
+    Obj = 0.5*X'*H*X + f'*X + c;
+    Cons = A*X <= b+pB*th_;
+    
+    OptAns = optimize(Cons,Obj);
+    time_yalmip_array(t) = OptAns.solvertime;
+    
+    X_yalmip_array(:,t) = double(X);
+    double(X)
+    
+    clc
 end
 
 figure(1)
@@ -309,7 +312,7 @@ plot(sum(X_mpt_con_array)+RealSolarPower+RealWindPower)
 hold on
 plot(sum(RealLoadPower))
 
-save('solution0.20.mat')
+save('solution0.21.mat')
 
 % figure(6)
 % plot(sum(RealLoadPower)-RealSolarPower-RealWindPower)
